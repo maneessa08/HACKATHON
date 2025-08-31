@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Business Dashboard</title>
+
+<!-- External CSS -->
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='financial.css') }}">
+</head>
+
+<body>
+<div class="container">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="logo-section">
+            <img src="/static/Image/optiviz.png" alt="Optiviz AI Logo">
+            <span class="menu-icon" id="menu-toggle">&#9776;</span>
+        </div>
+        <p class="section-title">General</p>
+        <a href="{{ url_for('home') }}" class="menu-item"><i class="fas fa-chart-line"></i> Dashboard</a>
+       <a href="{{ url_for('financial') }}" class="menu-item menu-item-analytics"><i class="fas fa-chart-pie"></i> Financial Analytics</a>
+       <a href="{{ url_for('invoice') }}" class="menu-item menu-item-invoice"><i class="fas fa-file-invoice"></i> Invoice</a>
+       <a href="{{ url_for('settings') }}" class="menu-item menu-item-settings"><i class="fas fa-cog"></i> Settings</a>
+       <a href="{{ url_for('signout') }}" class="menu-item"><i class="fas fa-sign-out-alt"></i> Logout</a>
+
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content" id="main-content">
+        <section class="content" id="dynamic-content">
+            <!-- Content will be loaded here by JS -->
+        </section>
+    </main>
+</div>
+       
+
+<!-- jQuery + jQuery UI -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
+<!-- Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!--newly added code- ai analytics-->
+<script src="script.js"></script> 
+
+<script>
+
+
+// --- DYNAMIC Financial Analytics Section ---
+$(".menu-item-analytics").click(function(e){
+    e.preventDefault();
+    loadAnalyticsSection();
+});
+
+function loadAnalyticsSection() {
+    $("#dynamic-content").html(`
+      <div class="wrap">
+        <div class="card">
+          <div class="top-cards">
+            <div class="kpi"><div class="muted">Total Income</div><div id="kpiIncome" class="value">RM 0.00</div></div>
+            <div class="kpi"><div class="muted">Total Expense</div><div id="kpiExpense" class="value">RM 0.00</div></div>
+            <div class="kpi"><div class="muted">Net (Profit / Loss)</div><div id="kpiNet" class="value">RM 0.00</div></div>
+            <div class="kpi"><div class="muted">Top Category</div><div id="kpiTop" class="value">—</div></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+            <div class="controls">
+              <button class="btn btn-income" id="addIncomeBtn">➕ Add Income</button>
+              <button class="btn btn-expense" id="addExpenseBtn">➖ Add Expense</button>
+              <button class="btn btn-ghost small-btn" id="exportCSVBtn">Export CSV</button>
+              <button class="btn btn-ghost small-btn" id="exportJSONBtn">Export JSON</button>
+              <input id="importFile" type="file" style="display:none" accept=".json">
+              <button class="btn btn-ghost small-btn" id="importJSONBtn">Import JSON</button>
+            </div>
+            <div style="margin-left:auto" class="range">
+              <div class="muted">Date Range:</div>
+              <input id="fromDate" type="date" /> <span class="muted">—</span> <input id="toDate" type="date" />
+              <button class="btn btn-ghost small-btn" id="applyDateBtn">Apply</button>
+              <button class="btn btn-ghost small-btn" id="clearDateBtn">Clear</button>
+            </div>
+          </div>
+        </div>
+        <div class="grid" style="margin-top:16px">
+          <div>
+            <div class="card">
+              <h3 style="margin:0 0 8px 0">Cashflow Trend & Forecast</h3>
+              <canvas id="lineChart" height="120"></canvas>
+              <div class="muted" style="margin-top:8px">Forecast uses a simple linear projection from historical monthly totals. Adjust scenario sliders to test impacts.</div>
+            </div>
+            <div style="height:12px"></div>
+            <div class="card">
+              <h3 style="margin:0 0 8px 0">Cashflow Calendar Heatmap (daily)</h3>
+              <div id="heatmap" class="heatmap"></div>
+              <div class="legend muted">
+                <div class="chip">Green = net positive day</div>
+                <div class="chip">Red = net negative day</div>
+                <div class="chip">Lighter = low activity</div>
+              </div>
+            </div>
+            <div style="height:12px"></div>
+            <div class="card">
+              <h3 style="margin:0 0 8px 0">Category Breakdown (interactive)</h3>
+              <canvas id="barChart" height="140"></canvas>
+              <div class="muted" style="margin-top:8px">Click a category bar to filter transactions by that category.</div>
+            </div>
+          </div>
+          <div>
+            <div class="card">
+              <h3 style="margin:0 0 8px 0">Transactions</h3>
+              <div id="quickPanel" style="display:none;margin-bottom:12px">
+                <div style="display:flex;gap:8px;margin-bottom:8px">
+                  <input id="quickAmount" type="number" placeholder="Amount" />
+                  <input id="quickCategory" type="text" placeholder="Category (type or choose)" />
+                </div>
+                <div style="display:flex;gap:8px;margin-bottom:8px">
+                  <input id="quickNote" type="text" placeholder="Optional note" />
+                  <input id="quickDate" type="date" />
+                </div>
+                <div style="display:flex;gap:8px">
+                  <button id="commitBtn" class="btn">Add</button>
+                  <button class="btn btn-ghost" id="cancelQuickBtn">Cancel</button>
+                </div>
+                <div id="suggestions" style="margin-top:8px"></div>
+              </div>
+              <div class="filter-row">
+                <input id="search" type="search" placeholder="Search category / note" />
+                <div style="margin-left:auto" class="muted">Transactions <span id="txnCount">0</span></div>
+              </div>
+              <div class="transactions" id="txnList"></div>
+            </div>
+            <div style="height:12px"></div>
+            <div class="card">
+              <h3 style="margin:0 0 8px 0">Scenario Simulator</h3>
+              <div class="simulator">
+                <div>
+                  <div class="muted">Sales growth (%) <small>(applied forward)</small></div>
+                  <input id="simSales" type="range" min="-50" max="200" value="0" />
+                  <div class="muted"> <span id="simSalesVal">0%</span></div>
+                </div>
+                <div>
+                  <div class="muted">Expense reduction (%)</div>
+                  <input id="simExpense" type="range" min="-50" max="100" value="0" />
+                  <div class="muted"> <span id="simExpenseVal">0%</span></div>
+                </div>
+              </div>
+              <div style="margin-top:12px" class="muted">Projected next-6-month net: <strong id="projNet">RM 0.00</strong></div>
+              <div style="margin-top:8px" class="muted">Try increasing sales or reducing expenses to see impact on forecast.</div>
+            </div>
+            <div style="height:12px"></div>
+            <div class="card">
+              <h3 style="margin:0 0 8px 0">Auto Insights</h3>
+              <div id="insights"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `);
+
+    analyticsInit();
+}
+
+// --- Overview KPI for dashboard ---
+function updateOverviewKPI() {
+    const STORAGE_KEY = 'bizai_transactions_v1';
+    let txns = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    let inc = 0, exp = 0;
+    txns.forEach(t => {
+        if (t.type === 'income') inc += t.amount;
+        else exp += t.amount;
+    });
+    const net = inc - exp;
+    function fmt(v){ return 'RM ' + Number(v||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+    if(document.getElementById('overviewIncome')) document.getElementById('overviewIncome').innerText = fmt(inc);
+    if(document.getElementById('overviewExpense')) document.getElementById('overviewExpense').innerText = fmt(exp);
+    if(document.getElementById('overviewNet')) document.getElementById('overviewNet').innerText = fmt(net);
+}
+
+// --- Analytics JS functions ---
+function analyticsInit() {
+    // State & Persistence
+    const STORAGE_KEY = 'bizai_transactions_v1';
+    let txns = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    let filteredTxns = null;
+    let activeCategoryFilter = null;
+    let dateFilter = null;
+    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    let pendingType = 'income';
+
+    // Utility
+    function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(txns)); }
+    function uid(){ return 't_'+Date.now()+'_'+Math.floor(Math.random()*999); }
+    function fmt(v){ return 'RM ' + Number(v||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+    // Add/Edit Transactions
+    function openQuick(type){
+      pendingType = type;
+      document.getElementById('quickPanel').style.display='block';
+      document.getElementById('quickAmount').value='';
+      document.getElementById('quickCategory').value='';
+      document.getElementById('quickNote').value='';
+      document.getElementById('quickDate').value = new Date().toISOString().slice(0,10);
+      document.getElementById('commitBtn').textContent = (type==='income'?'Add Income':'Add Expense');
+      buildSuggestions();
+      window.scrollTo({ top: document.getElementById('quickPanel').offsetTop - 20, behavior:'smooth' });
+    }
+    function closeQuick(){ document.getElementById('quickPanel').style.display='none'; }
+    document.getElementById('addIncomeBtn').onclick = function(){ openQuick('income'); };
+    document.getElementById('addExpenseBtn').onclick = function(){ openQuick('expense'); };
+    document.getElementById('cancelQuickBtn').onclick = closeQuick;
+    document.getElementById('commitBtn').onclick = function(){
+      const amount = Number(document.getElementById('quickAmount').value || 0);
+      const category = (document.getElementById('quickCategory').value || '').trim();
+      const note = (document.getElementById('quickNote').value || '').trim();
+      const date = document.getElementById('quickDate').value || (new Date()).toISOString().slice(0,10);
+      if(!amount || !category){ alert('Enter amount and category'); return; }
+      const item = { id: uid(), type: pendingType, amount: amount, category, note, date };
+      txns.push(item);
+      save();
+      closeQuick();
+      renderAll();
+    };
+
+    // Transaction Rendering
+    function renderTransactions(){
+      const list = document.getElementById('txnList');
+      const search = (document.getElementById('search').value || '').toLowerCase();
+      let arr = filteredTxns || txns.slice();
+      if(activeCategoryFilter) arr = arr.filter(t=>t.category===activeCategoryFilter);
+      if(dateFilter) arr = arr.filter(t=> t.date >= dateFilter.from && t.date <= dateFilter.to);
+      if(search) arr = arr.filter(t => t.category.toLowerCase().includes(search) || (t.note||'').toLowerCase().includes(search));
+      document.getElementById('txnCount').innerText = arr.length;
+      list.innerHTML = '';
+      arr.slice().reverse().forEach(t=>{
+        const div = document.createElement('div');
+        div.className = 'txn ' + (t.type==='income'?'income':'expense');
+        div.innerHTML = `
+          <div class="meta">
+            <div><strong>${t.category}</strong> <span class="muted"> · ${t.date}</span></div>
+            <div class="muted">${t.note||''}</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <div style="min-width:90px;text-align:right">${t.type==='income'?'+':'-'} ${fmt(t.amount)}</div>
+            <button class="btn btn-ghost small-btn" onclick="editTxn('${t.id}')">Edit</button>
+            <button class="btn btn-ghost small-btn" onclick="deleteTxn('${t.id}')">Delete</button>
+          </div>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    // Inline edit
+    window.editTxn = function(id){
+      const t = txns.find(x=>x.id===id);
+      if(!t) return;
+      openQuick(t.type);
+      document.getElementById('quickAmount').value = t.amount;
+      document.getElementById('quickCategory').value = t.category;
+      document.getElementById('quickNote').value = t.note || '';
+      document.getElementById('quickDate').value = t.date || '';
+      const btn = document.getElementById('commitBtn');
+      btn.textContent = 'Update';
+      btn.onclick = function update(){
+        const amount = Number(document.getElementById('quickAmount').value || 0);
+        const category = (document.getElementById('quickCategory').value || '').trim();
+        const note = (document.getElementById('quickNote').value || '').trim();
+        const date = document.getElementById('quickDate').value || (new Date()).toISOString().slice(0,10);
+        if(!amount || !category){ alert('Enter amount and category'); return; }
+        t.amount = amount; t.category = category; t.note = note; t.date = date; t.type = pendingType;
+        save(); renderAll(); closeQuick();
+        btn.onclick = function(){
+          const amount2 = Number(document.getElementById('quickAmount').value || 0);
+        };
+        btn.textContent = pendingType==='income' ? 'Add Income' : 'Add Expense';
+      };
+    };
+
+    // Delete
+    window.deleteTxn = function(id){
+      if(!confirm('Delete transaction?')) return;
+      txns = txns.filter(t=>t.id!==id);
+      save(); renderAll();
+    };
+
+    // Charts
+    const lineCtx = document.getElementById('lineChart').getContext('2d');
+    const barCtx = document.getElementById('barChart').getContext('2d');
+    let lineChart = new Chart(lineCtx, {
+      type:'line',
+      data:{labels:[],datasets:[{label:'Running Balance',data:[],borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,0.08)',tension:0.25}]},
+      options:{responsive:true,plugins:{legend:{display:false},tooltip:{mode:'index'}}}
+    });
+    let barChart = new Chart(barCtx,{
+      type:'bar',
+      data:{labels:[],datasets:[{label:'Category Total',data:[],backgroundColor:[]}]},
+      options:{responsive:true,plugins:{legend:{display:false}}}
+    });
+
+    function aggregatedMonthly(){
+      const map = {};
+      txns.forEach(t=>{
+        const d = new Date(t.date);
+        if(isNaN(d)) return;
+        const key = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+        map[key] = map[key] || {income:0,expense:0};
+        if(t.type==='income') map[key].income += t.amount; else map[key].expense += t.amount;
+      });
+      const keys = Object.keys(map).sort();
+      const months = keys.map(k=>{
+        const [y,m] = k.split('-'); return `${monthNames[Number(m)-1]} ${y}`;
+      });
+      const net = keys.map(k => (map[k].income || 0) - (map[k].expense || 0));
+      const inc = keys.map(k => map[k].income || 0);
+      const exp = keys.map(k => map[k].expense || 0);
+      return {keys,months,net,inc,exp};
+    }
+
+    function buildLineChart(){
+      const sorted = txns.slice().sort((a,b)=> new Date(a.date) - new Date(b.date));
+      const labels = [];
+      const data = [];
+      let running = 0;
+      sorted.forEach(t=>{
+        running += t.type==='income' ? t.amount : -t.amount;
+        labels.push(t.date);
+        data.push(Number(running.toFixed(2)));
+      });
+
+      const agg = aggregatedMonthly();
+      let forecast = []; let forecastLabels = [];
+      if(agg.keys.length >= 2){
+        const ys = agg.net;
+        const xs = ys.map((v,i)=>i);
+        const n = ys.length;
+        const sumX = xs.reduce((a,b)=>a+b,0);
+        const sumY = ys.reduce((a,b)=>a+b,0);
+        const sumXY = xs.reduce((a,b,i)=>a + b * ys[i],0);
+        const sumX2 = xs.reduce((a,b)=>a + b*b,0);
+        const slope = (n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX || 1);
+        const intercept = (sumY - slope*sumX)/n;
+        for(let i=0;i<6;i++){
+          const x = xs.length + i;
+          const pred = intercept + slope * x;
+          forecast.push(Number(pred.toFixed(2)));
+          const lastKey = agg.keys[agg.keys.length-1];
+          const [y,m] = lastKey.split('-');
+          const date = new Date(Number(y), Number(m)-1 + i +1, 1);
+          forecastLabels.push(`${monthNames[date.getMonth()]} ${date.getFullYear()}`);
+        }
+      }
+
+      lineChart.data.labels = labels.concat(forecastLabels);
+      lineChart.data.datasets[0].data = data.concat(new Array(forecastLabels.length).fill(null));
+      let runningMonthly = [];
+      let r=0;
+      agg.net.forEach(v=>{ r += v; runningMonthly.push(Number(r.toFixed(2))); });
+      let runningForecast = [];
+      r = runningMonthly[runningMonthly.length-1] || 0;
+      forecast.forEach(v=>{ r += v; runningForecast.push(Number(r.toFixed(2))); });
+      const projected = runningMonthly.concat(runningForecast);
+      if(lineChart.data.datasets.length < 2) lineChart.data.datasets.push({ label:'Projection', data:[], borderColor:'#f59e0b', borderDash:[6,4], backgroundColor:'rgba(245,158,11,0.06)', tension:0.25 });
+      lineChart.data.datasets[1].data = new Array(labels.length).fill(null).concat(projected.slice(labels.length - Math.max(0,labels.length-agg.months.length)));
+      lineChart.update();
+    }
+
+    function buildBarChart(){
+      const map = {};
+      txns.forEach(t=>{
+        map[t.category] = map[t.category] || {income:0,expense:0};
+        if(t.type==='income') map[t.category].income += t.amount; else map[t.category].expense += t.amount;
+      });
+      const cats = Object.keys(map);
+      const totals = cats.map(c=> map[c].income - map[c].expense );
+      const colors = totals.map(v => v >= 0 ? '#16a34a' : '#ef4444');
+      barChart.data.labels = cats;
+      barChart.data.datasets[0].data = totals;
+      barChart.data.datasets[0].backgroundColor = colors;
+      barChart.update();
+    }
+
+    document.getElementById('barChart').onclick = function(evt){
+      const points = barChart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+      if(points.length){
+        const idx = points[0].index;
+        const category = barChart.data.labels[idx];
+        activeCategoryFilter = category;
+        renderAll();
+      }
+    };
+
+    function buildHeatmap(){
+      const container = document.getElementById('heatmap');
+      container.innerHTML = '';
+      const days = 90;
+      const now = new Date();
+      const daily = {};
+      txns.forEach(t=>{
+        const k = t.date;
+        daily[k] = daily[k] || 0;
+        daily[k] += t.type==='income' ? t.amount : -t.amount;
+      });
+      const arr = [];
+      for(let i=days-1;i>=0;i--){
+        const d = new Date(); d.setDate(now.getDate() - i);
+        const key = d.toISOString().slice(0,10);
+        arr.push({ key, val: daily[key] || 0, date: new Date(d) });
+      }
+      for(let w=0; w < Math.ceil(arr.length/7); w++){
+        const weekDiv = document.createElement('div'); weekDiv.className='week';
+        for(let d=0; d<7; d++){
+          const idx = w*7 + d;
+          if(idx >= arr.length){
+            const empty = document.createElement('div'); empty.className='day'; empty.style.opacity=0; weekDiv.appendChild(empty); continue;
+          }
+          const cell = arr[idx];
+          const div = document.createElement('div');
+          div.className = 'day';
+          const v = cell.val;
+          if(v > 0) div.style.background = `rgba(16,163,138, ${Math.min(0.95, 0.15 + Math.log10(v+1)/3)})`;
+          else if(v < 0) div.style.background = `rgba(239,68,68, ${Math.min(0.95, 0.15 + Math.log10(Math.abs(v)+1)/3)})`;
+          else div.style.background = '#e6eef8';
+          div.title = `${cell.key} — ${ fmt(cell.val) }`;
+          div.onclick = ()=> {
+            filteredTxns = txns.filter(t=> t.date === cell.key); activeCategoryFilter = null; renderAll();
+          };
+          weekDiv.appendChild(div);
+        }
+        container.appendChild(weekDiv);
+      }
+    }
+
+    function computeKPIs(){
+      let inc = 0, exp = 0;
+      const catMap = {};
+      txns.forEach(t=>{
+        if(t.type==='income') inc += t.amount; else exp += t.amount;
+        catMap[t.category] = (catMap[t.category] || 0) + (t.type==='income'? t.amount : -t.amount);
+      });
+      const net = inc - exp;
+      document.getElementById('kpiIncome').innerText = fmt(inc);
+      document.getElementById('kpiExpense').innerText = fmt(exp);
+      const netEl = document.getElementById('kpiNet'); netEl.innerText = fmt(net);
+      netEl.style.color = net >=0 ? 'var(--income)' : 'var(--expense)';
+      const top = Object.keys(catMap).sort((a,b)=>Math.abs(catMap[b]) - Math.abs(catMap[a]))[0] || '—';
+      document.getElementById('kpiTop').innerText = top;
+
+      const insights = [];
+      const agg = aggregatedMonthly();
+      if(agg.months.length >= 2){
+        const last = agg.net[agg.net.length-1] || 0;
+        const prev = agg.net[agg.net.length-2] || 0;
+        const pct = prev !== 0 ? ((last - prev)/Math.abs(prev))*100 : 0;
+        insights.push(`<div>Month-over-month net change: <strong>${pct.toFixed(1)}%</strong></div>`);
+        if(pct < -20) insights.push(`<div style="color:var(--expense)">Warning: Net decreased ${Math.abs(pct).toFixed(1)}% vs last month</div>`);
+      }
+      const dailyMap = {};
+      txns.forEach(t=>{ dailyMap[t.date] = (dailyMap[t.date] || 0) + (t.type==='income'? t.amount : -t.amount); });
+      const dates = Object.keys(dailyMap).sort();
+      const last30 = dates.slice(-30);
+      const last7 = dates.slice(-7);
+      const avg30 = last30.reduce((s,d)=> s + (dailyMap[d]||0),0)/Math.max(1,last30.length);
+      const avg7 = last7.reduce((s,d)=> s + (dailyMap[d]||0),0)/Math.max(1,last7.length);
+      if(avg7 < avg30 * 0.6) insights.push(`<div style="color:var(--expense)">Alert: Weekly cashflow below 60% of 30-day average</div>`);
+      const expenseByCat = {};
+      txns.filter(t=>t.type==='expense').forEach(t=> expenseByCat[t.category] = (expenseByCat[t.category] || 0) + t.amount);
+      const bigExp = Object.keys(expenseByCat).sort((a,b)=>expenseByCat[b]-expenseByCat[a])[0];
+      if(bigExp) insights.push(`<div>Top expense category: <strong>${bigExp}</strong> (${fmt(expenseByCat[bigExp])})</div>`);
+      document.getElementById('insights').innerHTML = insights.join('');
+    }
+
+    function applyDateFilter(){
+      const from = document.getElementById('fromDate').value;
+      const to = document.getElementById('toDate').value;
+      if(!from || !to) return alert('Select both from and to dates');
+      dateFilter = { from, to };
+      renderAll();
+    }
+    function clearDateFilter(){ dateFilter = null; document.getElementById('fromDate').value = ''; document.getElementById('toDate').value=''; renderAll(); }
+    document.getElementById('applyDateBtn').onclick = applyDateFilter;
+    document.getElementById('clearDateBtn').onclick = clearDateFilter;
+
+    function exportJSON(){
+      const dataStr = JSON.stringify(txns, null, 2);
+      const blob = new Blob([dataStr], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download='transactions.json'; a.click();
+      URL.revokeObjectURL(url);
+    }
+    function importJSON(e){
+      const file = e.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = function(ev){
+        try{
+          const imported = JSON.parse(ev.target.result);
+          if(Array.isArray(imported)){ txns = txns.concat(imported); save(); renderAll(); alert('Imported OK'); }
+          else alert('Invalid JSON format');
+        }catch(err){ alert('Error reading JSON'); }
+      };
+      reader.readAsText(file);
+    }
+    function exportCSV(){
+      const header = ['id,type,amount,category,note,date'];
+      const rows = txns.map(t => `${t.id},${t.type},${t.amount},${escapeCsv(t.category)},${escapeCsv(t.note||'')},${t.date}`);
+      const csv = header.concat(rows).join('\n');
+      const blob = new Blob([csv], {type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download='transactions.csv'; a.click();
+      URL.revokeObjectURL(url);
+    }
+    function escapeCsv(s){ if(s==null) return ''; return '"' + String(s).replace(/"/g,'""') + '"'; }
+    document.getElementById('exportCSVBtn').onclick = exportCSV;
+    document.getElementById('exportJSONBtn').onclick = exportJSON;
+    document.getElementById('importJSONBtn').onclick = function(){ document.getElementById('importFile').click(); };
+    document.getElementById('importFile').onchange = importJSON;
+
+    function updateSimulator(){
+      document.getElementById('simSalesVal').innerText = document.getElementById('simSales').value + '%';
+      document.getElementById('simExpenseVal').innerText = document.getElementById('simExpense').value + '%';
+      const agg = aggregatedMonthly();
+      const n = agg.net.length;
+      let forecastNet = [];
+      if(n>=2){
+        const xs = agg.net.map((v,i)=>i);
+        const ys = agg.net;
+        const sumX = xs.reduce((a,b)=>a+b,0);
+        const sumY = ys.reduce((a,b)=>a+b,0);
+        const sumXY = xs.reduce((a,b,i)=>a + b*ys[i],0);
+        const sumX2 = xs.reduce((a,b)=>a + b*b,0);
+        const slope = (n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX || 1);
+        const intercept = (sumY - slope*sumX)/n;
+        for(let i=0;i<6;i++){
+          const x = n + i;
+          forecastNet.push(intercept + slope*x);
+        }
+      } else {
+        const last = agg.net[n-1] || 0;
+        forecastNet = new Array(6).fill(last);
+      }
+      const salesAdj = Number(document.getElementById('simSales').value)/100;
+      const expAdj = Number(document.getElementById('simExpense').value)/100;
+      const adjusted = forecastNet.map(v=>{
+        return v * (1 + salesAdj) * (1 + (-expAdj));
+      });
+      const projSum = adjusted.reduce((a,b)=>a+b,0);
+      document.getElementById('projNet').innerText = fmt(projSum);
+    }
+    document.getElementById('simSales').oninput = updateSimulator;
+    document.getElementById('simExpense').oninput = updateSimulator;
+
+    function uniqueCategories(){
+      const set = new Set(txns.map(t=>t.category));
+      return Array.from(set).filter(Boolean);
+    }
+    function buildSuggestions(){
+      const s = uniqueCategories();
+      const container = document.getElementById('suggestions');
+      container.innerHTML = '';
+      s.slice(0,8).forEach(cat=>{
+        const b = document.createElement('button');
+        b.className='btn btn-ghost small-btn';
+        b.textContent = cat;
+        b.onclick = ()=> document.getElementById('quickCategory').value = cat;
+        container.appendChild(b);
+      });
+    }
+
+    document.getElementById('search').oninput = renderTransactions;
+
+    function renderAll(){
+      renderTransactions();
+      computeKPIs();
+      buildLineChart();
+      buildBarChart();
+      buildHeatmap();
+      buildSuggestions();
+      updateSimulator();
+    }
+
+    if(txns.length === 0){
+      // Optionally seed demo data here
+    }
+
+    renderAll();
+}
+</script>
+</body>
+</html>
