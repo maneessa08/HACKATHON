@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Business Dashboard</title>
+
+<!-- External CSS -->
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+
+</head>
+
+<body>
+<div class="container">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="logo-section">
+            <img src="/static/Image/optiviz.jpeg" alt="Optiviz AI Logo">
+            <span class="menu-icon" id="menu-toggle">&#9776;</span>
+        </div>
+        <p class="section-title">General</p>
+       <a href="{{ url_for('home') }}" class="menu-item"><i class="fas fa-chart-line"></i> Dashboard</a>
+       <a href="{{ url_for('financial') }}" class="menu-item menu-item-analytics"><i class="fas fa-chart-pie"></i> Financial Analytics</a>
+       <a href="{{ url_for('invoice') }}" class="menu-item menu-item-invoice"><i class="fas fa-file-invoice"></i> Invoice</a>
+       <a href="{{ url_for('settings') }}" class="menu-item menu-item-settings"><i class="fas fa-cog"></i> Settings</a>
+       <a href="{{ url_for('signout') }}" class="menu-item"><i class="fas fa-sign-out-alt"></i> Logout</a>
+
+    </aside>
+
+    <!-- Main content -->
+    <main class="main-content" id="main-content">
+        <header class="header">
+            <h2>Welcome back, <span id="username">User</span></h2>
+            <div class="header-icons">
+                <span id="search-icon" title="Search"><i class="fas fa-search"></i></span>
+                <span id="notify-icon" title="Notifications"><i class="fas fa-bell"></i></span>
+                <span id="profile-icon" title="Profile"><i class="fas fa-user"></i></span>
+            </div>
+        </header>
+        <!-- Dynamic Content Area -->
+        <section class="content" id="dynamic-content">
+            <div class="dashboard-widgets">
+                <div class="widget">
+                    <h3>AI Insights</h3>
+                </div>
+                <div class="widget">
+                    <h3>Quick Actions</h3>
+                    <button onclick="alert('Create Invoice')">Create Invoice</button>
+                </div>
+                <div class="widget" id="analytics-overview">
+                    <h3>Financial Analytics Overview</h3>
+                    <div id="overview-kpi">
+                        <div>Total Income: <span id="overviewIncome">RM 0.00</span></div>
+                        <div>Total Expense: <span id="overviewExpense">RM 0.00</span></div>
+                        <div>Net Profit/Loss: <span id="overviewNet">RM 0.00</span></div>
+                    </div>
+                </div>
+            </div>
+              <!-- Task Performance Analytics -->
+<section class="task-analytics">
+  <div class="page-header">
+    <h2>📊 Task Performance Analytics</h2>
+    <a href="{{ url_for('reminder1') }}" class="button">Task Manager</a>
+  </div>
+        <section class="content" id="dynamic-content">
+            <!-- KPI Cards -->
+            <div class="kpi-container">
+                <div class="kpi-card"><h3>Total Tasks</h3><p id="kpi-total">0</p></div>
+                <div class="kpi-card"><h3>Completed On Time</h3><p id="kpi-ontime">0</p></div>
+                <div class="kpi-card"><h3>% Delayed</h3><p id="kpi-delayed">0%</p></div>
+                <div class="kpi-card"><h3>Avg Completion</h3><p id="kpi-avg">0 days</p></div>
+            </div>
+
+            <!-- Charts -->
+            <div class="charts">
+                <div class="card"><canvas id="completionChart"></canvas></div>
+                <div class="card"><canvas id="delayChart"></canvas></div>
+            </div>
+
+            <!-- Insights -->
+            <div class="insights card">
+                <h3>💡 Insights</h3>
+                <ul id="insights-list"></ul>
+            </div>
+        </section>
+
+       <!--Chatbox-->
+
+<div class="chatbox" id="chatbox">
+    <div class="chatbox-header">
+        <i class="fas fa-robot"></i>
+        <span>BizBot</span>
+        <button id="chatbox-close">&times;</button>
+    </div>
+    <div class="chatbox-messages" id="chatbox-messages">
+  <div class="message bot">
+    <div class="bot-icon">
+      <i class="fas fa-robot"></i>
+    </div>
+    <span>Hello! I am your Smart Sale Assistant. How can I help you today?</span>
+  </div>
+</div>
+
+<div class="chatbox-input">
+  <input type="text" id="chat-input" placeholder="Ask for anything...">
+  <button id="chatbox-send"><i class='fas fa-paper-plane'></i></button>
+</div>
+
+</div>
+
+<!--Floating chat icon-->
+<div class="chatbox-toggle" id="chatbox-toggle">
+    <div class="chat-icon">
+        <i class="fas fa-comments"></i>
+    </div>
+</div>
+
+        <!-- Search Bar -->
+        <div class="search-bar" id="search-bar" style="display:none;">
+            <input type="text" id="search-input" placeholder="Type and press Enter...">
+        </div>
+    </main>
+</div>
+
+<!-- jQuery + jQuery UI -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js"></script>
+<!-- Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!--newly added code- ai analytics-->
+<script src="script.js"></script> 
+
+<script>
+$(document).ready(function() {
+    // Chatbox send button (connects to Flask backend)
+    $("#chatbox-send").click(async function(){
+        var msg = $("#chat-input").val();
+        if(msg.trim() !== "") {
+            $("#chatbox-messages").append('<div class="message user">' + msg + '</div>');
+            $("#chat-input").val("");
+            $("#chatbox-messages").scrollTop($("#chatbox-messages")[0].scrollHeight);
+
+            // Send to Flask backend
+            const response = await fetch("/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: msg })
+            });
+            const data = await response.json();
+
+            // Show bot reply
+            $("#chatbox-messages").append(`
+                <div class="message bot">
+                    <div class="bot-icon"><i class="fas fa-robot"></i></div>
+                    <span>${data.reply}</span>
+                </div>
+            `);
+
+            $("#chatbox-messages").scrollTop($("#chatbox-messages")[0].scrollHeight);
+        }
+    });
+
+    // Chatbox toggle
+    $("#chatbox-toggle").click(function(){
+        $("#chatbox").fadeToggle(); // smooth effect
+    });
+
+    // Close button
+    $("#chatbox-close").click(function(){
+        $("#chatbox").fadeOut();
+    });
+
+    // Sample data for tasks
+    const tasks = [
+        { id: 1, title: "Design Homepage", status: "completed", onTime: true, days: 2 },
+        { id: 2, title: "Fix Bugs", status: "completed", onTime: false, days: 5 },
+        { id: 3, title: "Client Meeting", status: "pending", onTime: null, days: 0 },
+        { id: 4, title: "Update Docs", status: "completed", onTime: true, days: 1 },
+        { id: 5, title: "Backend API", status: "completed", onTime: false, days: 7 },
+    ];
+
+    // Calculate KPIs
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter(t => t.status === "completed").length;
+    const onTimeTasks = tasks.filter(t => t.status === "completed" && t.onTime === true).length;
+    const delayedTasks = tasks.filter(t => t.status === "completed" && t.onTime === false).length;
+    const avgCompletion = (
+        completedTasks > 0
+            ? (tasks.filter(t => t.status === "completed").reduce((sum, t) => sum + t.days, 0) / completedTasks).toFixed(1)
+            : 0
+    );
+
+    // Update KPI cards
+    document.getElementById("kpi-total").textContent = totalTasks;
+    document.getElementById("kpi-ontime").textContent = onTimeTasks;
+    document.getElementById("kpi-delayed").textContent = completedTasks > 0 ? ((delayedTasks / completedTasks) * 100).toFixed(1) + "%" : "0%";
+    document.getElementById("kpi-avg").textContent = avgCompletion + " days";
+
+    // Task Charts
+    new Chart(document.getElementById("completionChart"), {
+        type: "doughnut",
+        data: {
+            labels: ["Completed", "Pending"],
+            datasets: [
+                {
+                    data: [completedTasks, totalTasks - completedTasks],
+                    backgroundColor: ["#4CAF50", "#FFC107"],
+                },
+            ],
+        },
+        options: { responsive: true }
+    });
+
+    new Chart(document.getElementById("delayChart"), {
+        type: "bar",
+        data: {
+            labels: ["On Time", "Delayed"],
+            datasets: [
+                {
+                    label: "Tasks",
+                    data: [onTimeTasks, delayedTasks],
+                    backgroundColor: ["#2196F3", "#F44336"],
+                },
+            ],
+        },
+        options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    });
+
+    // Dummy data for financial charts
+    const txns = [
+        { date: "2025-08-01", type: "income", amount: 1200, category: "Sales" },
+        { date: "2025-08-02", type: "expense", amount: 400, category: "Supplies" },
+        { date: "2025-08-03", type: "income", amount: 800, category: "Consulting" },
+        { date: "2025-08-04", type: "expense", amount: 200, category: "Utilities" },
+        { date: "2025-08-05", type: "income", amount: 600, category: "Sales" },
+        { date: "2025-08-06", type: "expense", amount: 300, category: "Supplies" },
+    ];
+
+    // Financial Line Chart (Running Balance)
+    const sortedTxns = txns.slice().sort((a, b) => new Date(a.date) - new Date(b.date));
+    const lineLabels = [];
+    const lineData = [];
+    let running = 0;
+    sortedTxns.forEach(t => {
+        running += t.type === 'income' ? t.amount : -t.amount;
+        lineLabels.push(t.date);
+        lineData.push(Number(running.toFixed(2)));
+    });
+
+    
+});
+</script>
+</body>
+</html>

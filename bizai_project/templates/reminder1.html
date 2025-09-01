@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Business Dashboard</title>
+
+<!-- jQuery + jQuery UI -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+
+<!-- Icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<!-- Your custom styles -->
+<link rel="stylesheet" href="{{ url_for('static', filename='reminder.css') }}">
+
+
+</head>
+
+<body>
+<div class="container">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="logo-section">
+             <img src="/static/Image/optiviz.jpeg" alt="Optiviz AI Logo">
+            <span class="menu-icon" id="menu-toggle">&#9776;</span>
+        </div>
+         <p class="section-title">General</p>
+        <a href="{{ url_for('home') }}" class="menu-item"><i class="fas fa-chart-line"></i> Dashboard</a>
+       <a href="{{ url_for('financial') }}" class="menu-item menu-item-analytics"><i class="fas fa-chart-pie"></i> Financial Analytics</a>
+       <a href="{{ url_for('invoice') }}" class="menu-item menu-item-invoice"><i class="fas fa-file-invoice"></i> Invoice</a>
+       <a href="{{ url_for('settings') }}" class="menu-item menu-item-settings"><i class="fas fa-cog"></i> Settings</a>
+       <a href="{{ url_for('signout') }}" class="menu-item"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </aside>
+
+    <!-- Main content -->
+    <main class="main-content" id="main-content">
+        <header class="header">
+            <h2>Welcome back, <span id="username">User</span></h2>
+            <div class="header-icons">
+                <span id="search-icon" title="Search"><i class="fas fa-search"></i></span>
+                <span id="notify-icon" title="Notifications"><i class="fas fa-bell"></i></span>
+                <span id="profile-icon" title="Profile"><i class="fas fa-user"></i></span>
+            </div>
+        </header>
+
+        <!-- === Task Manager === -->
+        <h1>📌 Task Manager</h1>
+        <section class="task-container">
+          <div class="card">
+            <h2>Create Task</h2>
+            <form id="taskForm">
+              <label>Task Name</label>
+              <input id="title" required />
+
+              <label>Priority</label>
+              <select id="priority">
+                <option>High</option>
+                <option selected>Medium</option>
+                <option>Low</option>
+              </select>
+
+              <label>Due Date</label>
+              <input id="due" type="date" />
+
+              <label>Assign To</label>
+              <input id="assignee" />
+
+              <label>Description</label>
+              <textarea id="desc"></textarea>
+
+              <button type="submit">Add Task</button>
+            </form>
+          </div>
+
+          <div class="card">
+            <h2>Task Board</h2>
+            <div class="kanban">
+              <div class="col" id="todo" data-status="todo"><h3>To-Do</h3></div>
+              <div class="col" id="inprogress" data-status="inprogress"><h3>In Progress</h3></div>
+              <div class="col" id="done" data-status="done"><h3>Completed</h3></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- === Smart Reminders Panel === -->
+        <section class="reminder-panel">
+          <div class="card">
+            <h2>Smart Reminders</h2>
+            <div id="reminder-list"></div>
+          </div>
+
+          <div class="card">
+            <h2>Calendar View</h2>
+            <div id="calendar"></div>
+          </div>
+        </section>
+    </main>
+</div>
+
+<!-- Your JS -->
+<script>
+// === (same JS logic you already have) ===
+</script>
+</body>
+</html>
+
+
+<script>
+// ===== Utilities =====
+function formatDateLocal(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+function todayLocal() { return formatDateLocal(new Date()); }
+
+// ===== LocalStorage Setup =====
+let tasks = JSON.parse(localStorage.getItem("tasks") || "[]");
+function saveTasks(){ localStorage.setItem("tasks", JSON.stringify(tasks)); }
+
+// ===== Desktop Notifications =====
+async function requestNotificationPermission() {
+  if (!("Notification" in window)) return;
+  if (Notification.permission === "default") {
+    try { await Notification.requestPermission(); } catch(e) {}
+  }
+}
+
+function sendDesktopNotification(title, body) {
+  if (!("Notification" in window)) { alert(`${title}\n${body}`); return; }
+  if (Notification.permission === "granted") {
+    const n = new Notification(title, { body, tag: title+body });
+    n.onclick = () => window.focus();
+  } else { alert(`${title}\n${body}`); }
+}
+
+function alreadyNotified(key){ return sessionStorage.getItem(key)==="1"; }
+function markNotified(key){ sessionStorage.setItem(key,"1"); }
+
+// ===== Task Board =====
+function renderTasks() {
+  document.querySelectorAll(".col").forEach(c => c.querySelectorAll(".task").forEach(t=>t.remove()));
+
+  tasks.forEach(task => {
+    const div = document.createElement("div");
+    div.className = "task";
+    div.draggable = true;
+    div.dataset.id = task.id;
+    div.innerHTML = `
+      <p class="title">${task.title}</p>
+      <p class="meta">Priority: ${task.priority} | Due: ${task.due || "N/A"} | Assigned: ${task.assignee || "N/A"}</p>
+      <button onclick="editTask('${task.id}')">✏️ Edit</button>
+      <button onclick="deleteTask('${task.id}')">🗑️ Delete</button>
+      <button onclick="rescheduleTask('${task.id}')">📅 Reschedule</button>
+    `;
+    document.getElementById(task.status).appendChild(div);
+    div.addEventListener("dragstart", e => e.dataTransfer.setData("id", task.id));
+  });
+
+  renderReminders();
+  highlightCalendar();
+}
+
+// Create Task
+document.getElementById("taskForm").addEventListener("submit", function(e){
+  e.preventDefault();
+  const task = {
+    id: Date.now().toString(),
+    title: document.getElementById("title").value.trim(),
+    priority: document.getElementById("priority").value,
+    due: document.getElementById("due").value,
+    assignee: document.getElementById("assignee").value.trim(),
+    desc: document.getElementById("desc").value.trim(),
+    status: "todo"
+  };
+  tasks.push(task);
+  saveTasks(); renderTasks(); this.reset();
+});
+
+// Delete Task
+function deleteTask(id){ tasks = tasks.filter(t=>t.id!==id); saveTasks(); renderTasks(); }
+
+// Edit Task
+function editTask(id){
+  const task=tasks.find(t=>t.id===id);
+  if(!task) return;
+  const newTitle=prompt("Edit Title:",task.title);
+  if(newTitle!==null) task.title=newTitle.trim() || task.title;
+  const newPriority=prompt("Edit Priority (High/Medium/Low):",task.priority);
+  if(newPriority!==null && ["High","Medium","Low"].includes(newPriority)) task.priority=newPriority;
+  saveTasks(); renderTasks();
+}
+
+// Reschedule Task
+function rescheduleTask(id){
+  const newDate = prompt("Enter new due date (YYYY-MM-DD):");
+  if(newDate){
+    tasks = tasks.map(t=>t.id===id ? {...t, due:newDate} : t);
+    saveTasks(); renderTasks();
+  }
+}
+
+// Drag & Drop
+document.querySelectorAll(".col").forEach(col=>{
+  col.addEventListener("dragover",e=>e.preventDefault());
+  col.addEventListener("drop",e=>{
+    const id=e.dataTransfer.getData("id");
+    const task=tasks.find(t=>t.id===id);
+    if(task){ task.status=col.dataset.status; saveTasks(); renderTasks(); }
+  });
+});
+
+// ===== Reminders =====
+function renderReminders(){
+  const list=document.getElementById("reminder-list");
+  list.innerHTML="";
+  const today = todayLocal();
+
+  tasks.forEach(task=>{
+    if(task.status==="done" || !task.due) return;
+
+    let statusMsg="", cssClass="";
+    if(task.due===today){ statusMsg="is due today."; cssClass="due-today"; }
+    else if(task.due < today){
+      const diff = Math.floor((new Date(today) - new Date(task.due))/(1000*60*60*24));
+      statusMsg = `is overdue by ${diff} day(s).`; cssClass="overdue";
+    } else {
+      const diff = Math.floor((new Date(task.due) - new Date(today))/(1000*60*60*24));
+      statusMsg = `is due in ${diff} day(s).`; cssClass="due-soon";
+    }
+
+    const div=document.createElement("div");
+    div.className="reminder-item";
+    div.innerHTML=`<p><span class="${cssClass}">Task "${task.title}"</span> ${statusMsg}</p>`;
+    list.appendChild(div);
+  });
+}
+
+// ===== Calendar =====
+function highlightCalendar(){
+  $("#calendar").datepicker("destroy");
+  $("#calendar").datepicker({
+    beforeShowDay: function(date){
+      const d = formatDateLocal(date);
+      const found = tasks.find(t=>t.due===d && t.status!=="done");
+      if(found){ return [true,"highlight","Task Due: "+found.title]; }
+      return [true,"",""];
+    }
+  });
+}
+
+// ===== Automatic Notifications =====
+function checkAndNotify() {
+  const today = todayLocal();
+  tasks.forEach(task=>{
+    if(!task.due || task.status==="done") return;
+
+    if(task.due === today){
+      const key = `notify:${task.id}:${today}:due`;
+      if(!alreadyNotified(key)){
+        sendDesktopNotification("⏰ Task due today", `"${task.title}" is due today.`);
+        markNotified(key);
+      }
+    } else if(task.due < today) {
+      const daysOver = Math.floor((new Date(today) - new Date(task.due))/(1000*60*60*24));
+      const key = `notify:${task.id}:${today}:overdue`;
+      if(!alreadyNotified(key)){
+        sendDesktopNotification("⚠️ Task overdue", `"${task.title}" is overdue by ${daysOver} day(s).`);
+        markNotified(key);
+      }
+    }
+  });
+}
+
+// Init
+requestNotificationPermission();
+renderTasks();
+checkAndNotify();
+setInterval(checkAndNotify, 60000);
+</script>
+</body>
+</html>

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Out - BizAI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='signout.css') }}">
+</head>
+<body>
+    <div class="signout-container">
+        <h1>Sign Out</h1>
+        <p>Are you sure you want to sign out?</p>
+        <div class="button-group">
+            <a href="login.html" class="btn confirm">Yes, Sign Out</a>
+            <a href="{{ url_for('home') }}" class="btn cancel">Cancel</a>
+        </div>
+    </div>
+</body>
+</html>

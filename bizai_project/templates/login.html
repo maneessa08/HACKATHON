@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biz AI Login</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- Left side -->
+        <div class="left">
+            <h1>Welcome to Biz AI</h1>
+            <p class="subtitle">Login to Optimize with Intelligence</p>
+            <div class="charts">
+                <img src="/static/Image/download.jpg" alt="Optiviz AI Logo" class="logo">
+            </div>
+        </div>
+
+        <!-- Right side -->
+        <div class="right">
+            <div class="logo-section">
+                <img src="/static/Image/optiviz.jpeg" alt="Optiviz AI Logo" class="logo">
+            </div>
+
+            <!-- Login form starts here -->
+            <form class="login-form" action="{{ url_for('login') }}" method="post">
+                <label>Email</label>
+                <input type="text" name="username" placeholder="Enter your email" required>
+
+                <label>Password</label>
+                <input type="password" name="password" placeholder="Enter your password" required>
+
+                <hr>
+
+                <button type="submit" class="login-btn">Login</button>
+
+                <button type="button" class="google-btn">
+                    <img src="/static/Image/google.jpg" alt="Google" class="google-icon">
+                    Continue with Google
+                </button>
+
+                <div class="options">
+                    <label><input type="checkbox"> Remember me</label>
+                    <a href="#">Forgot Password?</a>
+                </div>
+            </form>
+            <!-- Login form ends here -->
+        </div>
+    </div>
+</body>
+</html>
