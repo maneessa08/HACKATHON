@@ -5,7 +5,9 @@ Project Title: BizAI - smart Operations & Finance Assistant for MSMEs
 Team Members:
 
 1.Pavithra a/p Muniandy 
+
 2.Jaclina a/p S Jacob
+
 3.Maneessa a/p Chandrasekaran
 
 Problem and solution summary
@@ -15,9 +17,13 @@ Problem and solution summary
 Technology stack used
 
 1.Frontend: Flask (HTML/CSS/Jinja templates)
+
 2.Backend: Python Flask
+
 3.AI Engine: Groq API + LLaMA model for fast natural language responses
+
 4.Database (future): Supabase/PostgreSQL for secure data storage
+
 5.Flow: User input → Flask → AI → Dashboard update
 
 Setup Instructions
@@ -67,10 +73,15 @@ http://127.0.0.1:5000/
 7. Features to Explore
 
 Login page – Secure entry to the dashboard.
+
 Dashboard overview – AI insights, quick actions, and financial summary.
+
 Task analytics – Charts for task completion, delays, and performance.
+
 Financial analytics – Income/expense tracking, cashflow trends, and forecasts.
+
 Invoice creator – Generate professional invoices with live preview and PDF export.
+
 AI Chatbox Assistant – Add expenses or check sales using natural language.
 
 Reflection on challenges and learning
@@ -78,17 +89,26 @@ Reflection on challenges and learning
 1.Challenges
 
 a.Time Limitation – Building a complete prototype with dashboard, analytics, invoicing, and AI chatbox within a short hackathon timeframe was intense. Prioritizing features was a challenge.
+
 b.Integration of Multiple Modules – Combining Flask backend, chart visualizations, invoice generation, and AI chatbot required careful coordination. Ensuring everything worked together smoothly took extra effort.
+
 c.API & Environment Setup – Configuring API keys (for AI assistant) and managing environment variables was tricky, especially when running on different teammates’ machines.
+
 d.Data Handling & Visualization – Designing charts that are both accurate and easy to read was challenging, as we had to balance technical correctness with clear storytelling for users.
+
 e.UI/UX Consistency – Making sure the dashboard looked professional while still being simple enough for demo purposes required multiple design iterations.
 
 2. Learnings
 
 a.Rapid Prototyping – Learned how to quickly build a working solution by focusing on core features instead of perfection.
+
 b.Collaboration & Version Control – Improved teamwork using Git/GitHub for version management and task distribution.
+
 c.Flask Framework – Strengthened backend development skills with Flask, routing, and integration of templates.
+
 d.Data Visualization – Gained experience in turning raw data into meaningful insights using charts and analytics.
+
 e.AI Integration – Learned how to connect an external AI API (Groq) into a real application, enabling natural language interaction with financial data.
+
 f.Presentation Skills – Understood the importance of storytelling in demos — showing not just features, but also the value to end users.
 
