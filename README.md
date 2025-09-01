@@ -16,15 +16,15 @@ Problem and solution summary
 
 Technology stack used
 
-1.Frontend: Flask (HTML/CSS/Jinja templates)
+1.Frontend: HTML, CSS, JavaScript
 
-2.Backend: Python Flask
+2.Backend: Python (Flask)
 
-3.AI Engine: Groq API + LLaMA model for fast natural language responses
+3.Database: SupaBase
 
-4.Database (future): Supabase/PostgreSQL for secure data storage
+4.Visualization: Matplotlib / Chart.js
 
-5.Flow: User input → Flask → AI → Dashboard update
+5.AI Integration: Groq API
 
 Setup Instructions
 
